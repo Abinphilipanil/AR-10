@@ -1,0 +1,40 @@
+# -------------------------
+# GLOBAL IGNORE
+# -------------------------
+.DS_Store
+Thumbs.db
+*.log
+logs/
+
+# -------------------------
+# SECRETS (DO NOT COMMIT)
+# -------------------------
+.env
+.env.*
+**/.env
+**/.env.*
+
+# -------------------------
+# NODE DEPENDENCIES
+# -------------------------
+node_modules/
+**/node_modules/
+
+# -------------------------
+# BUILDS
+# -------------------------
+dist/
+build/
+**/dist/
+**/build/
+
+# Vite
+**/.vite/
+
+# -------------------------
+# IDE / Editor
+# -------------------------
+.vscode/
+.idea/
+*.swp
+!**/.env.example

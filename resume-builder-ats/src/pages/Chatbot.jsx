@@ -1,19 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Chatbot() {
   const [openChat, setOpenChat] = useState(false);
   const [messages, setMessages] = useState([
-    {
-      sender: "bot",
-      text: "Resume Intelligence Activated. How can I help you ?",
-    },
+    { sender: "bot", text: "Resume Intelligence Activated. How can I help you ?" },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
   const endRef = useRef(null);
+
+  // ✅ Works in BOTH modes:
+  // - Dev: uses Vite proxy (/api/chat)
+  // - Prod: uses VITE_API_URL (Vercel env var)
+  const API_BASE =
+    import.meta.env.MODE === "development"
+      ? ""
+      : (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+  const CHAT_URL = `${API_BASE}/api/chat`;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -30,13 +38,13 @@ export default function Chatbot() {
     setMessages((prev) => [...prev, { sender: "user", text }]);
 
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
       });
 
-      // Read safely (avoid JSON parse errors)
+      // ✅ Safe parsing (prevents "Unexpected end of JSON input")
       const raw = await res.text();
       let data = {};
       try {
@@ -67,7 +75,10 @@ export default function Chatbot() {
         ...prev,
         {
           sender: "bot",
-          text: "⚠️ I couldn’t reach the server. Verify backend is running and proxy is correct.",
+          text:
+            "⚠️ I couldn’t reach the server.\n\n" +
+            "- In DEV: check Vite proxy + backend port\n" +
+            "- In PROD: check VITE_API_URL in Vercel + CORS in backend",
         },
       ]);
     } finally {
@@ -93,9 +104,11 @@ export default function Chatbot() {
 
           <div className="chatbot-body">
             {messages.map((msg, idx) => (
-             <div key={idx} className={`chat-message ${msg.sender}`}>
-  <ReactMarkdown>{msg.text}</ReactMarkdown>
-</div>
+              <div key={idx} className={`chat-message ${msg.sender}`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.text}
+                </ReactMarkdown>
+              </div>
             ))}
             <div ref={endRef} />
           </div>

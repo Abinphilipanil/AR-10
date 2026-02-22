@@ -10,7 +10,10 @@ function toGeminiContents(messages) {
 }
 
 export async function geminiChat({ message, messages, systemHint }) {
-  const API_KEY = process.env.GEMINI_API_KEY;
+ const API_KEY =
+  process.env.GEMINI_API_KEY ||
+  process.env.MY_API_KEY ||
+  process.env.GOOGLE_API_KEY;
 
   if (!API_KEY) {
     throw new Error("GEMINI_API_KEY not set in .env");

@@ -29,14 +29,21 @@ export default function Chatbot() {
 
     setMessages((prev) => [...prev, { sender: "user", text }]);
 
+    // Retrieve generated resume and analysis for context
+    const resumeContext = localStorage.getItem("generatedResume") || "";
+    const analysisContext = localStorage.getItem("atsAnalysis") || "";
+    
+    const contextualMessage = analysisContext 
+      ? `[Semantic ATS Analysis Context]\n${analysisContext}\n\n[User's Resume Context]\n${resumeContext}\n\n[User Question]\n${text}`
+      : `[User's Resume Context]\n${resumeContext}\n\n[User Question]\n${text}`;
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: contextualMessage, resumeContext }),
       });
 
-      // Read safely (avoid JSON parse errors)
       const raw = await res.text();
       let data = {};
       try {
@@ -46,20 +53,11 @@ export default function Chatbot() {
       }
 
       if (!res.ok) {
-        const msg =
-          data?.error?.message ||
-          data?.error ||
-          raw ||
-          `HTTP ${res.status}`;
+        const msg = data?.error?.message || data?.error || raw || `HTTP ${res.status}`;
         throw new Error(msg);
       }
 
-      const reply =
-        data?.reply ??
-        data?.message ??
-        data?.text ??
-        "I got a response but no reply field was returned.";
-
+      const reply = data?.reply ?? data?.message ?? data?.text ?? "I got a response but no reply field was returned.";
       setMessages((prev) => [...prev, { sender: "bot", text: reply }]);
     } catch (e) {
       setError(e?.message || "Failed to fetch");

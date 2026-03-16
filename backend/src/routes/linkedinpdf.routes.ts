@@ -54,13 +54,15 @@ RETURN ONLY VALID JSON (No markdown fences):
   "email": "address or null",
   "phone": "number or null",
   "location": "City, Country or null",
+  "website": "Portfolio URL or null",
+  "linkedin_url": "LinkedIn URL or null",
   "summary": "Impactful summary",
   "skills": { "technical": [], "soft": [], "tools": [] },
   "experience": [
     { "title": "Role", "company": "Org", "duration": "Dates", "description": "Quantifiable description" }
   ],
   "education": [
-    { "degree": "Degree", "institution": "University", "years": "Dates", "grade": "GPA/null" }
+    { "degree": "Degree", "institution": "University", "years": "Dates", "grade": "GPA/CGPA/Percentage (EXTRACT WITH HIGH PRIORITY)" }
   ],
   "projects": ["Impactful project descriptions"]
 }

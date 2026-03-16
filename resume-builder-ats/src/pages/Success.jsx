@@ -4,36 +4,62 @@ import ReactMarkdown from "react-markdown";
 
 function Success() {
   const navigate = useNavigate();
-
   const [resume, setResume] = useState("");
   const [activeTab, setActiveTab] = useState("preview");
   const [atsData, setAtsData] = useState(null);
 
   useEffect(() => {
-    const savedResume = localStorage.getItem("generatedResume") || localStorage.getItem("importedResumeText");
+    let savedResume = localStorage.getItem("generatedResume") || localStorage.getItem("importedResumeText");
     const savedAts = localStorage.getItem("atsAnalysis");
     
-    if (savedResume) setResume(savedResume);
+    if (savedResume) {
+      // 🧼 Sanitize: Remove LLM-hallucinated tags that clutter the output
+      const cleanResume = savedResume
+        .replace(/<center>\s*/gi, "")
+        .replace(/\s*<\/center>/gi, "")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<div>/gi, "")
+        .replace(/<\/div>/gi, "")
+        .trim();
+      setResume(cleanResume);
+    }
+
     if (savedAts) {
       try {
         setAtsData(JSON.parse(savedAts));
       } catch (e) {
-        console.error("Failed to parse ATS data from storage");
+        console.error("Failed to parse ATS data");
       }
     }
   }, []);
 
+  const handleDownloadPDF = () => {
+    const originalTitle = document.title;
+    document.title = "Resume";
+    window.print();
+    document.title = originalTitle;
+  };
+  const handleDownloadMD = () => {
+    const blob = new Blob([resume], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "resume.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!resume) {
     return (
       <div className="page">
-        <div className="upload-card">
+        <div className="upload-card" style={{ textAlign: 'center' }}>
           <h2>No Resume Found</h2>
-          <p style={{ color: "#94a3b8", marginBottom: "20px" }}>
-            Please go back and generate or import a resume first.
+          <p style={{ color: "var(--text-muted)", marginBottom: "24px" }}>
+            Please generate or import a resume first.
           </p>
-          <button className="btn-primary" onClick={() => navigate("/")}>
-            Go Home
-          </button>
+          <button className="btn-primary" onClick={() => navigate("/")}>Go Home</button>
         </div>
       </div>
     );
@@ -43,80 +69,99 @@ function Success() {
   const scoreColor = atsScore >= 80 ? "#22c55e" : atsScore >= 50 ? "#fbbf24" : "#f87171";
 
   return (
-    <div className="page" style={{ alignItems: "flex-start", paddingTop: "40px" }}>
-      <div style={{ width: "100%", maxWidth: "1000px", margin: "0 auto" }}>
+    <div className="page" style={{ alignItems: "flex-start", paddingTop: "100px" }}>
+      <div style={{ width: "100%", maxWidth: "1100px", margin: "0 auto" }}>
         
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
-          <h2 style={{ fontSize: "32px", fontWeight: 700 }}>Analysis Dashboard</h2>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button className="btn-secondary" onClick={() => navigate("/")}>
-              🏠 Back Home
+        {/* ── Dashboard Header (hidden in print) ── */}
+        <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "40px" }}>
+          <div>
+            <h1 style={{ fontSize: '2.5rem', marginBottom: '8px' }}>Resume Dashboard</h1>
+            <p style={{ color: 'var(--text-muted)' }}>AI-Powered ATS Analysis and Final Preview</p>
+          </div>
+          <div style={{ display: "flex", gap: "12px" }}>
+            <button className="btn-secondary" onClick={handleDownloadMD} style={{ padding: '10px 20px' }}>
+              MD
+            </button>
+            <button className="btn-primary" onClick={handleDownloadPDF} style={{ background: "var(--primary)", boxShadow: '0 4px 15px rgba(0, 210, 255, 0.2)' }}>
+              Download PDF
             </button>
           </div>
         </div>
 
-        {/* AI ATS Analysis Summary */}
-        <div style={{ background: "rgba(255,255,255,0.05)", padding: "30px", borderRadius: "16px", marginBottom: "30px", display: "flex", gap: "40px", flexWrap: "wrap" }}>
-          <div style={{ textAlign: "center", minWidth: "120px" }}>
-            <div style={{ fontSize: "52px", fontWeight: 800, color: scoreColor }}>{atsScore}%</div>
-            <div style={{ fontSize: "12px", color: "#94a3b8", fontWeight: 600 }}>ATS SCORE</div>
-            <div style={{ marginTop: "10px", padding: "4px 12px", borderRadius: "20px", background: scoreColor, color: "#fff", fontSize: "11px", fontWeight: 700 }}>
+        {/* ── ATS Score + Insights (hidden in print) ── */}
+        <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '30px', marginBottom: '40px' }}>
+          {/* Score Card */}
+          <div style={{ background: "var(--bg-card)", backdropFilter: 'blur(20px)', padding: "40px", borderRadius: "24px", border: "1px solid var(--glass-border)", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+            <div style={{ position: 'relative', width: '160px', height: '160px', margin: '0 auto 20px' }}>
+               <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="3" />
+                  <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke={scoreColor} strokeWidth="3" strokeDasharray={`${atsScore}, 100`} strokeLinecap="round" style={{ transition: 'stroke-dasharray 1s ease' }} />
+               </svg>
+               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                  <span style={{ fontSize: '40px', fontWeight: '800', color: scoreColor }}>{atsScore}%</span>
+               </div>
+            </div>
+            <h3 style={{ fontSize: '14px', letterSpacing: '2px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>ATS Match Score</h3>
+            <div style={{ padding: "6px 16px", borderRadius: "30px", background: `${scoreColor}20`, color: scoreColor, fontSize: "12px", fontWeight: "700", alignSelf: 'center', border: `1px solid ${scoreColor}40` }}>
                 {atsData?.matchLevel || "ANALYZING"}
             </div>
           </div>
-          
-          <div style={{ flex: 2, minWidth: "300px" }}>
-            <h3 style={{ marginBottom: "15px", fontSize: "18px" }}>AI Optimization Insights</h3>
+
+          {/* Insights Card */}
+          <div style={{ background: "var(--bg-card)", backdropFilter: 'blur(20px)', padding: "40px", borderRadius: "24px", border: "1px solid var(--glass-border)" }}>
+            <h3 style={{ fontSize: "20px", marginBottom: "24px", fontWeight: '600' }}>AI Optimization Insights</h3>
             
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px" }}>
                 <div>
-                    <h4 style={{ fontSize: "12px", color: "#22c55e", marginBottom: "8px", textTransform: "uppercase" }}>Core Strengths</h4>
-                    <ul style={{ fontSize: "13px", color: "#cbd5e1", paddingLeft: "15px" }}>
-                        {(atsData?.strengths || ["Semantic alignment detected"]).map((s, i) => <li key={i}>{s}</li>)}
+                    <h4 style={{ fontSize: "11px", color: "#22c55e", marginBottom: "12px", textTransform: "uppercase", letterSpacing: '1px' }}>Core Strengths</h4>
+                    <ul style={{ fontSize: "14px", color: "#cbd5e1", paddingLeft: "0", listStyle: 'none' }}>
+                        {(atsData?.strengths || ["Semantic alignment detected", "Strong keyword density"]).map((s, i) => (
+                          <li key={i} style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}>
+                            <span style={{ color: '#22c55e' }}>✓</span> {s}
+                          </li>
+                        ))}
                     </ul>
                 </div>
                 <div>
-                    <h4 style={{ fontSize: "12px", color: "#f87171", marginBottom: "8px", textTransform: "uppercase" }}>Targeted Gaps</h4>
-                    <ul style={{ fontSize: "13px", color: "#cbd5e1", paddingLeft: "15px" }}>
-                         {(atsData?.missingKeywords || ["No major gaps found"]).slice(0, 3).map((k, i) => <li key={i}>{k}</li>)}
+                    <h4 style={{ fontSize: "11px", color: "#f87171", marginBottom: "12px", textTransform: "uppercase", letterSpacing: '1px' }}>Critical Gaps</h4>
+                    <ul style={{ fontSize: "14px", color: "#cbd5e1", paddingLeft: "0", listStyle: 'none' }}>
+                         {(atsData?.missingKeywords || ["No major gaps found", "Ready for submission"]).slice(0, 3).map((k, i) => (
+                           <li key={i} style={{ marginBottom: '8px', display: 'flex', gap: '8px' }}>
+                            <span style={{ color: '#f87171' }}>!</span> {k}
+                           </li>
+                         ))}
                     </ul>
                 </div>
             </div>
 
-            <button 
-              className="btn-link" 
-              onClick={() => navigate("/chatbot")}
-              style={{ background: "none", border: "none", color: "#6366f1", padding: 0, marginTop: "20px", cursor: "pointer", fontWeight: 600, fontSize: "13px" }}
-            >
-              🚀 Use Career Coach to resolve these gaps →
+            <div style={{ marginTop: '30px', padding: '16px', borderRadius: '12px', background: 'rgba(0, 210, 255, 0.05)', border: '1px solid rgba(0, 210, 255, 0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Want more personalized advice?</span>
+              <button className="btn-link" onClick={() => navigate("/chatbot")} style={{ background: "none", border: "none", color: "var(--primary)", cursor: "pointer", fontWeight: 700, fontSize: "13px" }}>
+                Talk to Career Coach →
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Tabs (hidden in print) ── */}
+        <div className="no-print" style={{ display: "flex", justifyContent: 'space-between', alignItems: 'center', marginBottom: "20px" }}>
+          <div className="tabs" style={{ display: "flex", gap: "8px" }}>
+            <button className={`btn-secondary ${activeTab === 'preview' ? 'active' : ''}`} onClick={() => setActiveTab("preview")} style={{ padding: "10px 24px", fontSize: "14px", background: activeTab === 'preview' ? 'var(--primary)' : 'var(--glass-bg)', color: activeTab === 'preview' ? '#020617' : 'white', borderColor: activeTab === 'preview' ? 'var(--primary)' : 'var(--glass-border)' }}>
+              Live Preview
+            </button>
+            <button className={`btn-secondary ${activeTab === 'markdown' ? 'active' : ''}`} onClick={() => setActiveTab("markdown")} style={{ padding: "10px 24px", fontSize: "14px", background: activeTab === 'markdown' ? 'var(--primary)' : 'var(--glass-bg)', color: activeTab === 'markdown' ? '#020617' : 'white', borderColor: activeTab === 'markdown' ? 'var(--primary)' : 'var(--glass-border)' }}>
+              Source (Markdown)
             </button>
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: "4px", marginBottom: "15px" }}>
-          <button 
-            className={activeTab === "preview" ? "btn-primary" : "btn-secondary"} 
-            onClick={() => setActiveTab("preview")}
-            style={{ padding: "8px 20px", fontSize: "14px" }}
-          >
-            📄 Preview
-          </button>
-          <button 
-            className={activeTab === "markdown" ? "btn-primary" : "btn-secondary"} 
-            onClick={() => setActiveTab("markdown")}
-            style={{ padding: "8px 20px", fontSize: "14px" }}
-          >
-             Raw Markdown
-          </button>
-        </div>
-
-        <div style={{ background: "white", padding: "60px", borderRadius: "12px", color: "#1a202c", minHeight: "800px", boxShadow: "0 10px 30px rgba(0,0,0,0.4)" }}>
+        <div className="resume-container" style={{ background: "white", padding: "80px", borderRadius: "16px", color: "#1e293b", minHeight: "1000px", boxShadow: "0 30px 60px -12px rgba(0,0,0,0.5)", overflow: 'hidden' }}>
           {activeTab === "preview" ? (
             <div className="resume-md-content">
               <ReactMarkdown>{resume}</ReactMarkdown>
             </div>
           ) : (
-            <pre style={{ whiteSpace: "pre-wrap", color: "#334155", fontStyle: "italic" }}>{resume}</pre>
+            <pre style={{ whiteSpace: "pre-wrap", color: "#64748b", fontStyle: "italic", fontSize: '14px' }}>{resume}</pre>
           )}
         </div>
       </div>

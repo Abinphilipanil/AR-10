@@ -1,19 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import JarvisToggle from "../components/JarvisToggle";
 
 export default function Chatbot() {
   const [openChat, setOpenChat] = useState(false);
   const [messages, setMessages] = useState([
-    {
-      sender: "bot",
-      text: "Resume Intelligence Activated. How can I help you ?",
-    },
+    { sender: "bot", text: "👋 Hi! I'm **Resume AI**, your personal career coach.\n\nAsk me anything about your resume, interview tips, or job strategy!" },
   ]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
   const endRef = useRef(null);
+
+  const API_BASE =
+    import.meta.env.MODE === "development"
+      ? ""
+      : (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
+  const CHAT_URL = `${API_BASE}/api/chat`;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -29,19 +35,12 @@ export default function Chatbot() {
 
     setMessages((prev) => [...prev, { sender: "user", text }]);
 
-    // Retrieve generated resume and analysis for context
-    const resumeContext = localStorage.getItem("generatedResume") || "";
-    const analysisContext = localStorage.getItem("atsAnalysis") || "";
-    
-    const contextualMessage = analysisContext 
-      ? `[Semantic ATS Analysis Context]\n${analysisContext}\n\n[User's Resume Context]\n${resumeContext}\n\n[User Question]\n${text}`
-      : `[User's Resume Context]\n${resumeContext}\n\n[User Question]\n${text}`;
-
     try {
-      const res = await fetch("/api/chat", {
+      const resumeContext = localStorage.getItem("generatedResume") || localStorage.getItem("importedResumeText") || "";
+      const res = await fetch(CHAT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: contextualMessage, resumeContext }),
+        body: JSON.stringify({ message: text, resumeContext }),
       });
 
       const raw = await res.text();
@@ -65,7 +64,7 @@ export default function Chatbot() {
         ...prev,
         {
           sender: "bot",
-          text: "⚠️ I couldn’t reach the server. Verify backend is running and proxy is correct.",
+          text: "⚠️ Connection lost. Please check that the backend is running and try again.",
         },
       ]);
     } finally {
@@ -77,53 +76,94 @@ export default function Chatbot() {
     <div className="chatbot-container">
       {openChat ? (
         <div className="chatbot-window">
+          {/* Header */}
           <div className="chatbot-header">
-            <span>Resume Assistant</span>
+            <div className="chatbot-header-info">
+              <div className="chatbot-avatar-dot" />
+              <div>
+                <div className="chatbot-title">Resume AI</div>
+                <div className="chatbot-subtitle">Career Intelligence Engine • Online</div>
+              </div>
+            </div>
             <button
               type="button"
               aria-label="Close chat"
+              className="chatbot-close-btn"
               onClick={() => setOpenChat(false)}
-              style={{ cursor: "pointer", background: "transparent", border: "none" }}
             >
               ✕
             </button>
           </div>
 
+          {/* Messages */}
           <div className="chatbot-body">
             {messages.map((msg, idx) => (
-             <div key={idx} className={`chat-message ${msg.sender}`}>
-  <ReactMarkdown>{msg.text}</ReactMarkdown>
-</div>
+              <div key={idx} className={`chat-bubble-wrapper ${msg.sender}`}>
+                {msg.sender === "bot" && (
+                  <div className="chat-avatar bot-avatar">AI</div>
+                )}
+                <div className={`chat-bubble ${msg.sender}`}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
+                {msg.sender === "user" && (
+                  <div className="chat-avatar user-avatar">You</div>
+                )}
+              </div>
             ))}
+
+            {sending && (
+              <div className="chat-bubble-wrapper bot">
+                <div className="chat-avatar bot-avatar">AI</div>
+                <div className="chat-bubble bot typing-bubble">
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                  <span className="typing-dot" />
+                </div>
+              </div>
+            )}
+
             <div ref={endRef} />
           </div>
 
-          {error ? (
-            <div style={{ padding: "8px 12px", fontSize: 12, opacity: 0.9 }}>
-              Failed: {error}
-            </div>
-          ) : null}
+          {/* Error */}
+          {error && (
+            <div className="chatbot-error">⚠️ {error}</div>
+          )}
 
+          {/* Input */}
           <div className="chatbot-input">
             <input
               type="text"
-              placeholder={sending ? "Sending..." : "Ask something..."}
+              placeholder={sending ? "Resume AI is thinking..." : "Ask about your resume or career..."}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               disabled={sending}
             />
-            <button onClick={handleSend} disabled={sending || !input.trim()}>
-              {sending ? "..." : "Send"}
+            <button
+              onClick={handleSend}
+              disabled={sending || !input.trim()}
+              className="chatbot-send-btn"
+            >
+              {sending ? (
+                <span className="send-spinner" />
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              )}
             </button>
           </div>
         </div>
       ) : (
         <>
-          <div className="chatbot-tooltip">Need help with your resume?</div>
-          <button className="chatbot-toggle" onClick={() => setOpenChat(true)}>
-            💬
-          </button>
+          <div className="chatbot-tooltip">
+            💬 Chat with <strong>Resume AI</strong>
+          </div>
+          <JarvisToggle onClick={() => setOpenChat(true)} />
         </>
       )}
     </div>

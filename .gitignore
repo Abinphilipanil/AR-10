@@ -10,6 +10,7 @@ logs/
 # SECRETS (DO NOT COMMIT)
 # -------------------------
 .env
+.env.example
 .env.*
 **/.env
 **/.env.*
@@ -37,4 +38,3 @@ build/
 .vscode/
 .idea/
 *.swp
-!**/.env.example

@@ -1,18 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import Chatbot from "./Chatbot";
+import SvgFrame from "../components/SvgFrame";
+import FlashlightBackground from "../components/FlashlightBackground";
 
 function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="page">
-      <div className="home-content">
+    <div className="page" style={{ position: 'relative', overflow: 'hidden' }}>
+      <FlashlightBackground />
+      <div className="hero-section">
+        <SvgFrame />
         <h1>AI Resume Builder</h1>
-        <p>Create ATS-Friendly Professional Resumes</p>
+        <p style={{ fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto 40px', color: 'rgba(255,255,255,0.7)', fontWeight: '300' }}>
+          Craft professional, ATS-optimized resumes in seconds with our advanced neural engine and real-time profile integration.
+        </p>
 
         <div className="home-buttons">
           <button className="btn-primary" onClick={() => navigate("/templates")}>
-            Create Resume
+            Get Started
           </button>
 
           <button className="btn-secondary" onClick={() => navigate("/import")}>

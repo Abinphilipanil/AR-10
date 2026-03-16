@@ -1,3 +1,4 @@
+const API = import.meta.env.VITE_API_URL
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";

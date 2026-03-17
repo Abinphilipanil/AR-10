@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
-  "scripts": {
+ "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc",
-    "start": "tsx src/server.ts"
+    "start": "node dist/src/server.js"
+
   },
   "keywords": [],
   "author": "",

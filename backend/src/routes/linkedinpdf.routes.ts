@@ -1,6 +1,8 @@
 import express, { type Request, type Response } from "express"
 import multer from "multer"
-import pdfParse from "pdf-parse"
+import { createRequire } from "module"
+const require = createRequire(import.meta.url)
+const pdfParse = require("pdf-parse")
 import { askLLM } from "../services/llm.service.js"
 import { supabase } from "../config/supabase.js"
 

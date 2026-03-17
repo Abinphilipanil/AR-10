@@ -9,11 +9,33 @@ function Loading() {
   const [errorMsg, setErrorMsg] = useState("");
   const isMounted = useRef(true);
 
+  const safeParseJson = async (response, fallbackMessage) => {
+    const rawText = await response.text();
+
+    if (!rawText || !rawText.trim()) {
+      throw new Error(fallbackMessage || "Server returned an empty response.");
+    }
+
+    try {
+      return JSON.parse(rawText);
+    } catch (error) {
+      console.error("Invalid JSON response:", rawText);
+      throw new Error("Server returned an invalid JSON response.");
+    }
+  };
+
   useEffect(() => {
     isMounted.current = true;
+
     const processFlow = async () => {
       try {
-        const { github, jobDesc, linkedinFile, previousResumeFile, format } = location.state || {};
+        const {
+          github,
+          jobDesc,
+          linkedinFile,
+          previousResumeFile,
+          format,
+        } = location.state || {};
 
         if (!github || !jobDesc) {
           setErrorMsg("Missing inputs. Please go back and fill in required fields.");
@@ -26,6 +48,7 @@ function Loading() {
         // 1. Upload & Parse LinkedIn PDF
         if (linkedinFile) {
           setStatus("Parsing LinkedIn Profile PDF...");
+
           const linkedInFormData = new FormData();
           linkedInFormData.append("file", linkedinFile);
 
@@ -34,8 +57,15 @@ function Loading() {
             body: linkedInFormData,
           });
 
-          const linkedinJson = await linkedinRes.json();
-          if (!linkedinRes.ok) throw new Error(linkedinJson?.error || "LinkedIn parsing failed");
+          const linkedinJson = await safeParseJson(
+            linkedinRes,
+            "LinkedIn parser returned an empty response."
+          );
+
+          if (!linkedinRes.ok) {
+            throw new Error(linkedinJson?.error || "LinkedIn parsing failed.");
+          }
+
           parsedLinkedinData = linkedinJson.data;
           console.log("LinkedIn data parsed:", parsedLinkedinData);
         }
@@ -43,6 +73,7 @@ function Loading() {
         // 2. Upload & Parse Optional Previous Resume
         if (previousResumeFile) {
           setStatus("Extracting details from your existing resume...");
+
           const resumeFormData = new FormData();
           resumeFormData.append("resume", previousResumeFile);
 
@@ -51,27 +82,38 @@ function Loading() {
             body: resumeFormData,
           });
 
-          const resumeJson = await resumeRes.json();
-          if (!resumeRes.ok) throw new Error(resumeJson?.error || "Resume parsing failed");
-          parsedPreviousResumeText = resumeJson.rawText;
+          const resumeJson = await safeParseJson(
+            resumeRes,
+            "Resume parser returned an empty response."
+          );
+
+          if (!resumeRes.ok) {
+            throw new Error(resumeJson?.error || "Resume parsing failed.");
+          }
+
+          parsedPreviousResumeText = resumeJson.rawText || "";
           console.log("Previous resume extracted.");
         }
 
         // 3. Final Build step
         setStatus("AI is crafting your tailored ATS resume...");
+
         const buildResponse = await fetch("/api/builder/build-from-links", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            github, 
-            jobDesc, 
+          body: JSON.stringify({
+            github,
+            jobDesc,
             linkedinPdfData: parsedLinkedinData,
             previousResumeText: parsedPreviousResumeText,
-            format: format || "Professional"
+            format: format || "Professional",
           }),
         });
 
-        const buildData = await buildResponse.json();
+        const buildData = await safeParseJson(
+          buildResponse,
+          "Resume builder returned an empty response."
+        );
 
         if (!buildResponse.ok) {
           throw new Error(buildData?.error || `Server error ${buildResponse.status}`);
@@ -80,18 +122,27 @@ function Loading() {
         if (isMounted.current) {
           setStatus("Success! Saving results...");
 
-          // Store metadata in localStorage
           localStorage.setItem("resumeBuilt", "true");
-          localStorage.setItem("generatedResume", buildData.resume);
-          localStorage.setItem("atsAnalysis", JSON.stringify(buildData.atsAnalysis || null));
-          localStorage.setItem("linkedinFetched", String(buildData.linkedinFetched || !!parsedLinkedinData));
-          localStorage.setItem("githubFetched", String(buildData.githubFetched));
+          localStorage.setItem("generatedResume", buildData.resume || "");
+          localStorage.setItem(
+            "atsAnalysis",
+            JSON.stringify(buildData.atsAnalysis || null)
+          );
+          localStorage.setItem(
+            "linkedinFetched",
+            String(buildData.linkedinFetched || !!parsedLinkedinData)
+          );
+          localStorage.setItem(
+            "githubFetched",
+            String(buildData.githubFetched || false)
+          );
           localStorage.setItem("resumeDbId", buildData.dbId || "");
 
           navigate("/success");
         }
       } catch (err) {
         console.error("Pipeline failed:", err);
+
         if (isMounted.current) {
           setErrorMsg(err?.message || "Something went wrong. Please try again.");
         }
@@ -104,7 +155,6 @@ function Loading() {
       isMounted.current = false;
     };
   }, [navigate, location.state]);
-
 
   if (errorMsg) {
     return (
@@ -122,16 +172,44 @@ function Loading() {
 
   return (
     <div className="page">
-      <div className="upload-card" style={{ textAlign: "center", maxWidth: "600px" }}>
+      <div
+        className="upload-card"
+        style={{ textAlign: "center", maxWidth: "600px" }}
+      >
         <UiverseLoader />
-        <h2 style={{ marginTop: "32px", marginBottom: "12px", background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+        <h2
+          style={{
+            marginTop: "32px",
+            marginBottom: "12px",
+            background: "linear-gradient(to right, #fff, #94a3b8)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
           Crafting Your Resume
         </h2>
-        <p style={{ color: "#94a3b8", marginBottom: "28px", fontSize: "16px", minHeight: "24px", fontWeight: "300" }}>
+        <p
+          style={{
+            color: "#94a3b8",
+            marginBottom: "28px",
+            fontSize: "16px",
+            minHeight: "24px",
+            fontWeight: "300",
+          }}
+        >
           {status}
         </p>
-        <p style={{ color: "#64748b", fontSize: "13px", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: "20px", paddingTop: "20px" }}>
-          The AI engine is analyzing your profiles and tailoring everything to the job description.
+        <p
+          style={{
+            color: "#64748b",
+            fontSize: "13px",
+            borderTop: "1px solid rgba(255,255,255,0.05)",
+            marginTop: "20px",
+            paddingTop: "20px",
+          }}
+        >
+          The AI engine is analyzing your profiles and tailoring everything to the
+          job description.
         </p>
       </div>
     </div>

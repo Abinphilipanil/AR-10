@@ -37,11 +37,10 @@ function Loading() {
           format,
         } = location.state || {};
 
-        if (!github || !jobDesc) {
-          setErrorMsg("Missing inputs. Please go back and fill in required fields.");
-          return;
-        }
-
+if (!github || !jobDesc) {
+  navigate("/upload", { replace: true });
+  return;
+}
         let parsedLinkedinData = null;
         let parsedPreviousResumeText = "";
 

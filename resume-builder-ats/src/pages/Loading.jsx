@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import UiverseLoader from "../components/UiverseLoader";
 
 function Loading() {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ function Loading() {
     isMounted.current = true;
     const processFlow = async () => {
       try {
-        const { github, jobDesc, linkedinFile, previousResumeFile } = location.state || {};
+        const { github, jobDesc, linkedinFile, previousResumeFile, format } = location.state || {};
 
         if (!github || !jobDesc) {
           setErrorMsg("Missing inputs. Please go back and fill in required fields.");
@@ -65,7 +66,8 @@ function Loading() {
             github, 
             jobDesc, 
             linkedinPdfData: parsedLinkedinData,
-            previousResumeText: parsedPreviousResumeText
+            previousResumeText: parsedPreviousResumeText,
+            format: format || "Professional"
           }),
         });
 
@@ -103,6 +105,7 @@ function Loading() {
     };
   }, [navigate, location.state]);
 
+
   if (errorMsg) {
     return (
       <div className="page">
@@ -119,14 +122,16 @@ function Loading() {
 
   return (
     <div className="page">
-      <div className="upload-card" style={{ textAlign: "center" }}>
-        <h2 style={{ marginBottom: "12px" }}>Generating Your Profile...</h2>
-        <p style={{ color: "#94a3b8", marginBottom: "28px", fontSize: "14px", minHeight: "20px" }}>
+      <div className="upload-card" style={{ textAlign: "center", maxWidth: "600px" }}>
+        <UiverseLoader />
+        <h2 style={{ marginTop: "32px", marginBottom: "12px", background: 'linear-gradient(to right, #fff, #94a3b8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Crafting Your Resume
+        </h2>
+        <p style={{ color: "#94a3b8", marginBottom: "28px", fontSize: "16px", minHeight: "24px", fontWeight: "300" }}>
           {status}
         </p>
-        <div className="loader"></div>
-        <p style={{ color: "#64748b", fontSize: "12px", marginTop: "24px" }}>
-          Step-by-step: PDF analysis, GitHub sync, and Gemini Resume Crafting.
+        <p style={{ color: "#64748b", fontSize: "13px", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: "20px", paddingTop: "20px" }}>
+          The AI engine is analyzing your profiles and tailoring everything to the job description.
         </p>
       </div>
     </div>
